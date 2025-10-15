@@ -1,4 +1,4 @@
-# Telco Churn — GENAI-assisted experiments
+# Telco Churn — Gen AI-assisted experiments
 
 This repository contains a single analysis / experimentation script, `churn_genai.py`, that demonstrates a full workflow for predicting telco customer churn and exploring ways to augment the dataset using generative models and NLP pipelines.
 
