@@ -1,0 +1,13 @@
+pandas>=1.3
+numpy>=1.21
+scikit-learn>=1.0
+joblib>=1.0
+pytest>=7.0
+
+# Optional / experimental dependencies used in `churn_genai.py` (install as needed):
+torch>=1.12
+transformers>=4.0
+datasets>=2.0
+sentence-transformers>=2.2
+umap-learn>=0.5
+ipywidgets>=7.6
