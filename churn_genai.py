@@ -330,7 +330,6 @@ with torch.no_grad():  # disable gradient calculations
 #       all_classifications.extend(category)
 
 category_cols.append('sentiment')
-
 all_data['sentiment'] = all_sentiments
 data_senti = prep_data(category_cols, all_data)
 data_senti.drop('customer_feedback', axis=1, inplace=True)
