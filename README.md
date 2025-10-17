@@ -1,6 +1,6 @@
 # Telco Churn — Gen AI-assisted experiments
 
-This repository contains a single analysis / experimentation script, `churn_genai.py`, that demonstrates a full workflow for predicting telco customer churn and exploring ways to augment the dataset using generative models and NLP pipelines.
+This repository contains a single script, `churn_genai.py`, that demonstrates a full workflow for predicting telco customer churn and exploring ways to augment the dataset using generative models and NLP pipelines.
 
 It started as a Colab notebook and was converted to a script. The code trains baseline classifiers, generates synthetic customer feedback via LLM prompts (example code commented out), and explores several ML/ML+NLP pipelines including:
 
@@ -12,6 +12,9 @@ It started as a Colab notebook and was converted to a script. The code trains ba
 - business-impact / ROI thresholding utilities to pick operating points
 
 The goal is to show how generative AI (for synthetic feedback) and small NLP models can be incorporated into a churn prediction pipeline and how to reason about operational thresholds from a business ROI perspective.
+
+The html widget section for Business ROI calculator might not be visible outside a notebook/connecting to a frontend environment.
+
 
 ## Files
 
@@ -64,12 +67,4 @@ Warning: the script contains long-running sections (embedding generation, model 
 
 - Parameterize paths and hyperparameters with a small CLI (argparse) or environment variables.
 - Split the Colab notebook content into modular scripts: data preprocessing, model training, LLM-generation, embedding pipeline, ROI calculator.
-- Add unit tests for core preprocessing and ROI functions.
-- Add a lightweight requirements file (`requirements.txt`) with pinned versions.
-
-If you'd like, I can:
-
-- add a `requirements.txt` with versions that match the script, or
-- refactor the script into smaller modules and add a simple CLI, or
-- create a minimal unit test for `prep_data()` and `optimal_threshold_for_roi_pr()`.
 

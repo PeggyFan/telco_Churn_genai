@@ -24,12 +24,11 @@ from sklearn.linear_model import LogisticRegression
 from transformers import AutoTokenizer, pipeline, DataCollatorWithPadding, DistilBertForSequenceClassification, TrainingArguments, Trainer
 from datasets import Dataset
 from sentence_transformers import SentenceTransformer, util
+import random
+from openai import OpenAI
 from IPython.display import display, clear_output
 pd.set_option('display.float_format', '{:,.2f}'.format)
 warnings.filterwarnings(action='ignore', category=DataConversionWarning)
-
-# from google.colab import drive
-# drive.mount('/content/gdrive')
 
 # ===============================
 # Utility Functions for Saving
@@ -203,103 +202,82 @@ data2 = prep_data(category_cols, data)
 X_train, X_val, X_test, y_train, y_val, y_test = split_data(data2)
 y_test_b = y_test.copy()
 save_dataframe(pd.DataFrame(y_test_b), "y_test_b", root_path)
-
 acc_df, model_trained = benchmark_classifiers(X_train, y_train, X_val, y_val)
 save_models(model_trained, ["random_forest_model_v0", "logistic_model_v0"], root_path)
-
 acc_df['data'] = 'v0'
 save_dataframe(acc_df, "acc_df_v0", root_path)
 
 """## GENERATE LLM DATA"""
 #### How long did this part take???
 
-# import os
-# import pandas as pd
-# import random
-# from openai import OpenAI
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+prompt_template = """
+You are generating synthetic customer feedback for a telco churn dataset.
 
-# client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+Customer details:
+- Gender: {gender}
+- Senior Citizen: {SeniorCitizen}
+- Partner: {partner}
+- Tenure: {tenure} months
+- Contract type: {contract}
+- Monthly charges: {charges}
+- Churned: {churn}
 
-# # Few example churn-related contexts to guide LLM
-# prompt_template = """
-# You are generating synthetic customer feedback for a telco churn dataset.
+Task:
+Generate a short customer feedback statement (1-3 sentences) that reflects
+their likelihood of churn. Make it realistic and vary tone across examples.
+"""
 
-# Customer details:
-# - Gender: {gender}
-# - Senior Citizen: {SeniorCitizen}
-# - Partner: {partner}
-# - Tenure: {tenure} months
-# - Contract type: {contract}
-# - Monthly charges: {charges}
-# - Churned: {churn}
+def generate_feedback(row):
+    prompt = prompt_template.format(
+        gender=row["gender"],
+        SeniorCitizen=row["SeniorCitizen"],
+        partner=row["Partner"],
+        tenure=row["tenure"],
+        contract=row["Contract"],
+        charges=row["MonthlyCharges"],
+        churn=row["Churn"]
+    )
 
-# Task:
-# Generate a short customer feedback statement (1-3 sentences) that reflects
-# their likelihood of churn. Make it realistic and vary tone across examples.
-# """
+    # Call the LLM
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",   # cost-efficient, or use gpt-4o
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=60,
+        temperature=0.8,
+    )
 
-# def generate_feedback(row):
-#     prompt = prompt_template.format(
-#         gender=row["gender"],
-#         SeniorCitizen=row["SeniorCitizen"],
-#         partner=row["Partner"],
-#         tenure=row["tenure"],
-#         contract=row["Contract"],
-#         charges=row["MonthlyCharges"],
-#         churn=row["Churn"]
-#     )
+    return response.choices[0].message.content.strip()
 
-#     # Call the LLM
-#     response = client.chat.completions.create(
-#         model="gpt-4o-mini",   # cost-efficient, or use gpt-4o
-#         messages=[{"role": "user", "content": prompt}],
-#         max_tokens=60,
-#         temperature=0.8,
-#     )
+# Generate feedback for a small subset (to test)
+df_sample = data.sample(3, random_state=42)
+df_sample["customer_feedback"] = df_sample.apply(generate_feedback, axis=1)
 
-#     return response.choices[0].message.content.strip()
+# Generate feedback for the full dataset in chunks to avoid timeouts
+df = []
+chunk = 500
 
-# # # Generate feedback for a small subset (to test)
-# df_sample = data.sample(3, random_state=42)
-# df_sample["customer_feedback"] = df_sample.apply(generate_feedback, axis=1)
+for i in range(0, len(data2), chunk):
+  current_chunk = i
+  remainder = len(data2) - i
 
-### should have chunked this....
-### How long did this take????
-### how much $?
+  if remainder < 0:
+    break
+  elif remainder < chunk:
+    data_chunk = data2.iloc[i:i+remainder]
+  else:
+    data_chunk = data2.iloc[i:i+chunk]
 
-# df = []
-# chunk = 500
+  data_chunk["customer_feedback"] = data_chunk.apply(generate_feedback, axis=1)
 
-# for i in range(0, len(data2), chunk):
-#   current_chunk = i
-#   remainder = len(data2) - i
+  # file_path = f"/content/drive/MyDrive/Colab Notebooks/Outputs/telco_feedback_{chunk}.csv"
+  # data_chunk.to_csv(file_path, index=False)
 
-#   if remainder < 0:
-#     break
-#   elif remainder < chunk:
-#     data_chunk = data2.iloc[i:i+remainder]
-#   else:
-#     data_chunk = data2.iloc[i:i+chunk]
+  df.append(data_chunk)
 
-#   data_chunk["customer_feedback"] = data_chunk.apply(generate_feedback, axis=1)
-
-#   # file_path = f"/content/drive/MyDrive/Colab Notebooks/Outputs/telco_feedback_{chunk}.csv"
-#   # data_chunk.to_csv(file_path, index=False)
-
-#   df.append(data_chunk)
-
-# data_feedback = pd.concat(df, axis=0)
-# print(data_feedback.shape)
-# data_feedback.to_csv("/content/drive/MyDrive/telco_feedback_7500.csv", index=False)
-
-"""# Incorporating feedback features"""
-
-# data_feedback1 = pd.read_csv(f"{root_path}/telco_feedback_4000.csv")
-# data_feedback2 = pd.read_csv(f"{root_path}/telco_feedback_7500.csv")
-# data_feedback1['Churn_encoded'] = data_feedback1['Churn'].map({"Stayed": 0, "Churned": 1})
-# data_feedback2['Churn_encoded'] = data_feedback2['Churn'].map({"Stayed": 0, "Churned": 1})
-# all_data = pd.concat([data_feedback1, data_feedback2], axis=0)
-# all_data.to_csv(f"{root_path}/telco_feedback_all.csv", index=False)
+data_feedback = pd.concat(df, axis=0)
+data_feedback['Churn_encoded'] = data_feedback['Churn'].map({"Stayed": 0, "Churned": 1})
+data_feedback.to_csv("/content/drive/MyDrive/telco_feedback_7500.csv", index=False)
 
 """## 1. Batch / Bulk Inference
 
@@ -310,7 +288,7 @@ Transformers libraries like Hugging Face support DataLoader + GPU batching, whic
 If you’re CPU-bound, even batching 10–50 texts per forward pass reduces overhead.
 """
 
-all_data = pd.read_csv(f"{root_path}/telco_feedback_all.csv")
+all_data = pd.read_csv(f"{root_path}/telco_feedback_7500.csv")
 customer_feedback = list(all_data['customer_feedback'].values)
 
 # Sentiment model
@@ -391,8 +369,10 @@ def tokenize(batch):
 
 os.environ["WANDB_DISABLED"] = "true"
 
-texts = customer_feedback
-labels = all_sentiments
+## Should be using the first 4000 rows as training data
+
+texts = customer_feedback[:4000]
+labels = all_sentiments[:4000]
 dataset = Dataset.from_dict({'text': texts, 'label': labels})
 dataset = dataset.rename_column("label", "old_labels")
 label2id = {"NEGATIVE": 0, "POSITIVE": 1}
@@ -428,7 +408,6 @@ dataset_test = Dataset.from_dict({'text': texts})
 """
 
 start_time = time.perf_counter()
-
 encoded_dataset = dataset_test.map(tokenize, batched=True)
 encoded_dataset.set_format('torch', columns=['input_ids', 'attention_mask'])
 predictions = trainer.predict(encoded_dataset)
@@ -472,6 +451,7 @@ One forward pass through a small embedding model is faster than repeated zero-sh
 Embeddings are reusable; you can compute them once and store them.
 Classifier inference is near-instant on CPU.
 """ 
+
 all_data = pd.read_csv(f"{root_path}/telco_feedback_all.csv")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 all_data["embedding"] = all_data["customer_feedback"].apply(lambda x: model.encode(x).tolist())
@@ -496,9 +476,9 @@ clf = model_trained[1]
 joblib.dump(clf, f"{root_path}/random_forest_model_v3.pkl")
 acc_df['data'] = 'v3'
 acc_df.to_csv('f'{root_path}/acc_df_v3.csv')
-'
-'
-"""## Sanity check Feedback generated by LLM"""
+
+
+"""## Sanity check feedback generated by LLM"""
 # Option 1 — Use Embedding Similarity
 # Compute embedding similarity between generated text and archetypal “churn” or “loyalty” texts.
 
@@ -527,7 +507,7 @@ df['Churn_encoded'] = df['Churn'].map({"Stayed": 0, "Churned": 1})
 sentiment_analyzer = pipeline("sentiment-analysis", 
                               model="distilbert-base-uncased-finetuned-sst-2-english")
 df["sentiment"] = df["customer_feedback"].apply(lambda x: sentiment_analyzer(x)[0]["label"])
-df["sentiment_score"] = df["customer_feedback"].apply(lambda x: sentiment_analyzer(x)[0]["score"])
+# df["sentiment_score"] = df["customer_feedback"].apply(lambda x: sentiment_analyzer(x)[0]["score"])
 df["sentiment_num"] = df["sentiment"].map({"POSITIVE": 0, "NEGATIVE": 1})
 correlation = df[["sentiment_num", "Churn_encoded"]].corr().iloc[0,1]
 # Correlation between sentiment and churn: 0.877
