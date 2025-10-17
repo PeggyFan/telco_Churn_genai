@@ -63,8 +63,7 @@ Warning: the script contains long-running sections (embedding generation, model 
 - The script uses fixed random seeds in train_test_split (random_state=42) where applicable to aid reproducibility.
 - I recommend iterating on smaller subsets before scaling to the full dataset. Several `pd.read_csv` calls expect intermediate CSVs (for example `telco_feedback_all.csv`) which are created in the commented-out LLM generation steps.
 
-## Next steps / Improvements
+## Business ROI Calculator Based on Churn Model Parameters
 
-- Parameterize paths and hyperparameters with a small CLI (argparse) or environment variables.
-- Split the Colab notebook content into modular scripts: data preprocessing, model training, LLM-generation, embedding pipeline, ROI calculator.
+[![Launch Voila](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PeggyFan/telco_Churn_genai/HEAD?urlpath=voila/render/churn_roi_widget.ipynb)
 
