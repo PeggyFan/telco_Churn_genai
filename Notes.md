@@ -88,4 +88,6 @@ This is very interesting, because V1 is the dataset where all the sentiment labe
 ## 4. Busines ROI
 What is key is how to translate the model predictions into business context that stakeholders can understand. I created a business ROI calculator.
 
+Click on Launch Viola below and wait a minute or two to launch the calculator!
+
 [![Launch Voila](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/PeggyFan/telco_Churn_genai/HEAD?urlpath=voila/render/churn_roi_widget.ipynb)
